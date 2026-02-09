@@ -1,0 +1,87 @@
+#include <Wire.h>
+#include <Adafruit_BMP085.h>
+#include <DHT.h>
+#include <SPI.h>
+#include <LoRa.h>
+
+/* -------- PIN DEFINITIONS -------- */
+#define BMP_SDA 25
+#define BMP_SCL 26
+#define DHTPIN  14
+
+// LoRa Pins (change if needed)
+#define LORA_SCK  18
+#define LORA_MISO 19
+#define LORA_MOSI 23
+#define LORA_SS   5
+#define LORA_RST  14
+#define LORA_DIO0 26
+
+/* -------- SENSOR TYPE -------- */
+#define DHTTYPE DHT11
+
+/* -------- OBJECTS -------- */
+Adafruit_BMP085 bmp;
+DHT dht(DHTPIN, DHTTYPE);
+
+void setup() {
+  Serial.begin(115200);
+  delay(2000);
+  Serial.println("\n=== ESP32 SENSOR + LORA START ===");
+
+  /* ---- I2C INIT ---- */
+  Wire.begin(BMP_SDA, BMP_SCL);
+
+  /* ---- BMP180 INIT ---- */
+  if (!bmp.begin()) {
+    Serial.println("❌ BMP180 NOT FOUND");
+  } else {
+    Serial.println("✅ BMP180 OK");
+  }
+
+  /* ---- DHT INIT ---- */
+  dht.begin();
+  Serial.println("✅ DHT OK");
+
+  /* ---- LORA INIT ---- */
+  SPI.begin(LORA_SCK, LORA_MISO, LORA_MOSI, LORA_SS);
+  LoRa.setPins(LORA_SS, LORA_RST, LORA_DIO0);
+
+  if (!LoRa.begin(433E6)) {   // 433 MHz (use 866E6 or 915E6 if needed)
+    Serial.println("❌ LoRa init failed!");
+    while (1);
+  }
+  Serial.println("✅ LoRa Ready");
+}
+
+void loop() {
+
+  float bmpTemp = bmp.readTemperature();
+  float bmpPressure = bmp.readPressure(); // Pa
+  float humidity = dht.readHumidity();
+
+  // Replace NaN with 0
+  if (isnan(bmpTemp)) bmpTemp = 0;
+  if (isnan(bmpPressure)) bmpPressure = 0;
+  if (isnan(humidity)) humidity = 0;
+
+  // Print to Serial
+  Serial.println("---- SENSOR DATA ----");
+  Serial.print("BMP Temp: "); Serial.println(bmpTemp);
+  Serial.print("Pressure: "); Serial.println(bmpPressure);
+  Serial.print("Humidity: "); Serial.println(humidity);
+  Serial.println("---------------------");
+
+  // Create LoRa packet
+  String data = String(bmpTemp) + "," + String(bmpPressure) + "," + String(humidity);
+
+  // Send LoRa
+  LoRa.beginPacket();
+  LoRa.print(data);
+  LoRa.endPacket();
+
+  Serial.print("📡 Sent: ");
+  Serial.println(data);
+
+  delay(2000);
+}
