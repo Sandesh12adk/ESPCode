@@ -79,7 +79,7 @@ void loop() {
   if (result == 1) {
     Serial.println("📡 LoRa data sent successfully: " + data);
   } else {
-    Serial.println("❌ LoRa data send failed!");
+    Serial.println("❌ LoRa data send failed! ");
   }
 
   delay(2000);

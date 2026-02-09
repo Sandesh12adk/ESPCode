@@ -15,8 +15,8 @@
 #define LORA_FREQ 433E6  // Frequency (433MHz, 866MHz, 915MHz)
 
 /* -------- WIFI SETTINGS -------- */
-const char* ssid = "YOUR_WIFI_SSID";
-const char* password = "YOUR_WIFI_PASSWORD";
+const char* ssid = "HardwareHackathon203";
+const char* password = "hardware";
 
 /* -------- VARIABLES -------- */
 String incomingData = "";
@@ -85,7 +85,7 @@ void loop() {
     // Send POST request
     if (WiFi.status() == WL_CONNECTED) {
       HTTPClient http;
-      http.begin("http://localhost:8080/weather-data"); // Your server URL
+      http.begin("http://192.168.10.235:8080/weather-data"); // Your server URL
       http.addHeader("Content-Type", "application/json");
       int httpResponseCode = http.POST(jsonPayload);
 
