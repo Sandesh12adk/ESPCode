@@ -101,3 +101,108 @@ void loop() {
   Serial.println("-------------------------");
   delay(2000);
 }
+You sent
+#include <Wire.h>
+#include <Adafruit_BMP085.h>
+#include <DHT.h>
+#include <WiFi.h>
+#include <HTTPClient.h>
+
+/* -------- WIFI CREDENTIALS -------- */
+const char* ssid = "B-LINK_F6C9";
+const char* password = "blender123";
+
+/* -------- PIN DEFINITIONS -------- */
+#define BMP_SDA 25
+#define BMP_SCL 26
+#define DHTPIN  14
+
+/* -------- SENSOR TYPE -------- */
+#define DHTTYPE DHT11   // Change to DHT22 if needed
+
+/* -------- OBJECTS -------- */
+Adafruit_BMP085 bmp;
+DHT dht(DHTPIN, DHTTYPE);
+
+void setup() {
+  Serial.begin(115200);
+  delay(2000);
+
+  Serial.println("\n=== ESP32 SENSOR DEBUG START ===");
+
+  /* ---- WIFI INIT ---- */
+  WiFi.begin(ssid, password);
+  Serial.print("Connecting to WiFi");
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println("\n✅ Connected to WiFi!");
+
+  /* ---- I2C INIT ---- */
+  Wire.begin(BMP_SDA, BMP_SCL);
+  Serial.println("I2C initialized on SDA=" + String(BMP_SDA) + ", SCL=" + String(BMP_SCL));
+
+  /* ---- BMP180 INIT ---- */
+  if (!bmp.begin()) {
+    Serial.println("❌ BMP180 not found. Check wiring!");
+  } else {
+    Serial.println("✅ BMP180 initialized successfully.");
+  }
+
+  /* ---- DHT INIT ---- */
+  dht.begin();
+  Serial.println("✅ DHT sensor initialized");
+
+  Serial.println("=== SETUP COMPLETE ===");
+}
+
+void loop() {
+  float dhtTemp = dht.readTemperature();
+  float humidity = dht.readHumidity();
+  float bmpPressure = NAN;
+
+  // Read BMP180 pressure if initialized
+  if (bmp.begin()) {
+    bmpPressure = bmp.readPressure();
+  }
+
+  // Prepare JSON payload
+  String jsonPayload = "{";
+  if (!isnan(dhtTemp)) {
+    jsonPayload += "\"temp\":" + String(dhtTemp, 1) + ",";
+  } else {
+    jsonPayload += "\"temp\":null,";
+  }
+
+  if (!isnan(humidity)) {
+    jsonPayload += "\"humidity\":" + String(humidity, 1) + ",";
+  } else {
+    jsonPayload += "\"humidity\":null,";
+  }
+
+  if (!isnan(bmpPressure)) {
+    jsonPayload += "\"pressure\":" + String(bmpPressure, 1) + ",";
+  } else {
+    jsonPayload += "\"pressure\":null,";
+  }
+
+
+  if (WiFi.status() == WL_CONNECTED) {
+    HTTPClient http;
+    http.begin("http://192.168.16.104:8080/weather-data"); // Your endpoint
+    http.addHeader("Content-Type", "application/json");
+    int httpResponseCode = http.POST(jsonPayload);
+
+    if (httpResponseCode > 0) {
+      Serial.println("HTTP Response code: " + String(httpResponseCode));
+    } else {
+      Serial.println("❌ Error sending POST: " + String(httpResponseCode));
+    }
+    http.end();
+  } else {
+    Serial.println("❌ WiFi not connected");
+  }
+
+  delay(2000); // Wait 2 seconds
+}
