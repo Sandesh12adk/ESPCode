@@ -1,4 +1,4 @@
-#include <SPI.h>
+#include <SPI.h> 
 #include <LoRa.h>
 #include <WiFi.h>
 #include <HTTPClient.h>
@@ -12,7 +12,7 @@
 #define LORA_DIO0 33
 
 /* -------- SETTINGS -------- */
-#define LORA_FREQ 433E6  // Frequency (433MHz, 866MHz, 915MHz)
+#define LORA_FREQ 433E6  // Frequency in Hz
 
 /* -------- WIFI SETTINGS -------- */
 const char* ssid = "HardwareHackathon203";
@@ -24,7 +24,7 @@ String incomingData = "";
 void setup() {
   Serial.begin(115200);
   delay(2000);
-  Serial.println("\n=== ESP32 LORA THIRD STATION START ===");
+  Serial.println("\n=== ESP32 LORA FINAL STATION START ===");
 
   // ---- WIFI INIT ----
   WiFi.begin(ssid, password);
@@ -45,7 +45,7 @@ void setup() {
     Serial.println("❌ LoRa init failed!");
     while (1);
   }
-  Serial.println("✅ LoRa Ready (Third Station)");
+  Serial.println("✅ LoRa Ready (Final Station)");
 }
 
 void loop() {
@@ -58,18 +58,30 @@ void loop() {
       incomingData += (char)LoRa.read();
     }
 
+    incomingData.trim(); // Remove \n, \r, spaces
     Serial.print("📥 Received: ");
     Serial.println(incomingData);
 
-    // Parse CSV data: temp,humidity,pressure
-    float temp = NAN, humidity = NAN, pressure = NAN;
+    // Parse CSV data: temp,pressure,humidity (from sender)
+    float temp = NAN, pressure = NAN, humidity = NAN;
     int firstComma = incomingData.indexOf(',');
     int secondComma = incomingData.indexOf(',', firstComma + 1);
 
     if (firstComma != -1 && secondComma != -1) {
-      temp = incomingData.substring(0, firstComma).toFloat();
-      humidity = incomingData.substring(firstComma + 1, secondComma).toFloat();
-      pressure = incomingData.substring(secondComma + 1).toFloat();
+      // Extract strings
+      String tempStr = incomingData.substring(0, firstComma);
+      String pressureStr = incomingData.substring(firstComma + 1, secondComma);
+      String humidityStr = incomingData.substring(secondComma + 1);
+
+      // Trim spaces/newlines
+      tempStr.trim();
+      pressureStr.trim();
+      humidityStr.trim();
+
+      // Convert to float
+      temp = tempStr.toFloat();
+      pressure = pressureStr.toFloat() / 100.0; // convert Pa → hPa
+      humidity = humidityStr.toFloat();
 
       // Validate sensor ranges
       if (temp < -50 || temp > 60) temp = 0;
@@ -95,7 +107,7 @@ void loop() {
     // Send POST request
     if (WiFi.status() == WL_CONNECTED) {
       HTTPClient http;
-      http.begin("http://192.168.10.225:8080/weather-data"); // your server IP
+      http.begin("http://192.168.10.225:8080/weather-data"); // replace with your server IP
       http.addHeader("Content-Type", "application/json");
 
       int httpResponseCode = http.POST(jsonPayload);
