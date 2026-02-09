@@ -72,7 +72,7 @@ void loop() {
   Serial.print("BMP Temp: "); Serial.println(bmpTemp);
   Serial.print("Pressure: "); Serial.println(bmpPressure);
   Serial.print("Humidity: "); Serial.println(humidity);
-  Serial.print("Rain: "); Serial.println(isRain ? "YES" : "NO");
+  Serial.print("Rain: "); Serial.println(isRain ? "No" : "Yes");
   Serial.println("---------------------");
 
   // Create LoRa packet: temp,pressure,humidity,rain
