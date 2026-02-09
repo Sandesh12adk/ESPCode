@@ -61,15 +61,15 @@ void loop() {
     Serial.print("📥 Received: ");
     Serial.println(incomingData);
 
-    // Parse CSV data: temp,humidity,pressure
-    float temp = NAN, humidity = NAN, pressure = NAN;
+    // Parse CSV data: temp,pressure,humidity
+    float temp = NAN, pressure = NAN, humidity = NAN;
     int firstComma = incomingData.indexOf(',');
     int secondComma = incomingData.indexOf(',', firstComma + 1);
 
     if (firstComma != -1 && secondComma != -1) {
       temp = incomingData.substring(0, firstComma).toFloat();
-      humidity = incomingData.substring(firstComma + 1, secondComma).toFloat();
-      pressure = incomingData.substring(secondComma + 1).toFloat();
+      pressure = incomingData.substring(firstComma + 1, secondComma).toFloat() / 100.0; // Pa → hPa
+      humidity = incomingData.substring(secondComma + 1).toFloat();
 
       // Validate sensor ranges
       if (temp < -50 || temp > 60) temp = 0;
@@ -95,7 +95,7 @@ void loop() {
     // Send POST request
     if (WiFi.status() == WL_CONNECTED) {
       HTTPClient http;
-      http.begin("http://192.168.10.235:8080/weather-data"); // your server IP
+      http.begin("http:// 192.168.10.225:8080/weather-data"); // replace with your server IP
       http.addHeader("Content-Type", "application/json");
 
       int httpResponseCode = http.POST(jsonPayload);
