@@ -9,16 +9,16 @@
 #define BMP_SCL 26
 #define DHTPIN  14
 
-// LoRa Pins (change if needed)
+/* -------- SENSOR TYPE -------- */
+#define DHTTYPE DHT11
+
+/* -------- LoRa PINS -------- */
 #define LORA_SCK  18
 #define LORA_MISO 19
 #define LORA_MOSI 23
 #define LORA_SS   5
-#define LORA_RST  14
-#define LORA_DIO0 26
-
-/* -------- SENSOR TYPE -------- */
-#define DHTTYPE DHT11
+#define LORA_RST  27
+#define LORA_DIO0 33
 
 /* -------- OBJECTS -------- */
 Adafruit_BMP085 bmp;
@@ -33,11 +33,8 @@ void setup() {
   Wire.begin(BMP_SDA, BMP_SCL);
 
   /* ---- BMP180 INIT ---- */
-  if (!bmp.begin()) {
-    Serial.println("❌ BMP180 NOT FOUND");
-  } else {
-    Serial.println("✅ BMP180 OK");
-  }
+  if (!bmp.begin()) Serial.println("❌ BMP180 NOT FOUND");
+  else Serial.println("✅ BMP180 OK");
 
   /* ---- DHT INIT ---- */
   dht.begin();
@@ -47,7 +44,7 @@ void setup() {
   SPI.begin(LORA_SCK, LORA_MISO, LORA_MOSI, LORA_SS);
   LoRa.setPins(LORA_SS, LORA_RST, LORA_DIO0);
 
-  if (!LoRa.begin(433E6)) {   // 433 MHz (use 866E6 or 915E6 if needed)
+  if (!LoRa.begin(433E6)) { // 433MHz
     Serial.println("❌ LoRa init failed!");
     while (1);
   }
@@ -55,7 +52,6 @@ void setup() {
 }
 
 void loop() {
-
   float bmpTemp = bmp.readTemperature();
   float bmpPressure = bmp.readPressure(); // Pa
   float humidity = dht.readHumidity();
@@ -75,13 +71,16 @@ void loop() {
   // Create LoRa packet
   String data = String(bmpTemp) + "," + String(bmpPressure) + "," + String(humidity);
 
-  // Send LoRa
+  // Send LoRa and check if successful
   LoRa.beginPacket();
   LoRa.print(data);
-  LoRa.endPacket();
+  int result = LoRa.endPacket(); // returns 1 if success, 0 if fail
 
-  Serial.print("📡 Sent: ");
-  Serial.println(data);
+  if (result == 1) {
+    Serial.println("📡 LoRa data sent successfully: " + data);
+  } else {
+    Serial.println("❌ LoRa data send failed!");
+  }
 
   delay(2000);
 }
