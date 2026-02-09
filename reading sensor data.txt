@@ -1,7 +1,7 @@
 #include <Wire.h>
 #include <Adafruit_BMP085.h>
 #include <DHT.h>
-//i am a comment 
+
 /* -------- PIN DEFINITIONS -------- */
 #define BMP_SDA 25
 #define BMP_SCL 26
