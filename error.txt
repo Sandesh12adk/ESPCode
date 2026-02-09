@@ -1,3 +1,6 @@
- 🌐 Sending JSON: {"temp":21.8,"humidity":0.0,"pressure":90694.0,"uv":0,"isRain":false}
-15:52:58.186 -> ❌ POST Error: connection refused
-15:52:59.605 -> 📥 Received: 21.70,90696.00,0.00
+❌ POST Error: connection refused
+15:58:10.454 -> 📥 Received: 21.10,90703.00,0.00
+15:58:10.454 -> 🌐 Sending JSON: {"temp":21.1,"humidity":0.0,"pressure":1013.0,"uv":0,"isRain":false}
+15:58:15.450 -> ❌ POST Error: connection refused
+15:58:17.049 -> 📥 Received: 21.10,90709.00,0.00
+15:58:17.049 -> 🌐 Sending JSON: {"temp":21.1,"humidity":0.0,"pressure":1013.0,"uv":0,"isRain":false}
