@@ -1,0 +1,106 @@
+#include <SPI.h>
+#include <LoRa.h>
+#include <WiFi.h>
+#include <HTTPClient.h>
+
+/* -------- LoRa Pins -------- */
+#define LORA_SCK  13
+#define LORA_MISO 12
+#define LORA_MOSI 27
+#define LORA_SS   26
+#define LORA_RST  25
+#define LORA_DIO0 33
+
+/* -------- SETTINGS -------- */
+#define LORA_FREQ 433E6  // Frequency (433MHz, 866MHz, 915MHz)
+
+/* -------- WIFI SETTINGS -------- */
+const char* ssid = "YOUR_WIFI_SSID";
+const char* password = "YOUR_WIFI_PASSWORD";
+
+/* -------- VARIABLES -------- */
+String incomingData = "";
+
+void setup() {
+  Serial.begin(115200);
+  delay(2000);
+  Serial.println("\n=== ESP32 LORA THIRD STATION START ===");
+
+  /* ---- WIFI INIT ---- */
+  WiFi.begin(ssid, password);
+  Serial.print("Connecting to WiFi");
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println("\n✅ Connected to WiFi");
+
+  /* ---- LORA INIT ---- */
+  SPI.begin(LORA_SCK, LORA_MISO, LORA_MOSI, LORA_SS);
+  LoRa.setPins(LORA_SS, LORA_RST, LORA_DIO0);
+
+  if (!LoRa.begin(LORA_FREQ)) {
+    Serial.println("❌ LoRa init failed!");
+    while (1);
+  }
+  Serial.println("✅ LoRa Ready (Third Station)");
+}
+
+void loop() {
+  int packetSize = LoRa.parsePacket();
+  if (packetSize) {
+    incomingData = "";
+
+    // Read LoRa packet
+    while (LoRa.available()) {
+      incomingData += (char)LoRa.read();
+    }
+
+    Serial.print("📥 Received: ");
+    Serial.println(incomingData);
+
+    // Parse CSV data: temp,pressure,humidity
+    float temp = 0, pressure = 0, humidity = 0;
+    int firstComma = incomingData.indexOf(',');
+    int secondComma = incomingData.indexOf(',', firstComma + 1);
+
+    if (firstComma != -1 && secondComma != -1) {
+      temp = incomingData.substring(0, firstComma).toFloat();
+      pressure = incomingData.substring(firstComma + 1, secondComma).toFloat();
+      humidity = incomingData.substring(secondComma + 1).toFloat();
+    }
+
+    // Build JSON payload
+    String jsonPayload = "{";
+    jsonPayload += "\"temp\":" + String(temp, 1) + ",";
+    jsonPayload += "\"humidity\":" + String(humidity, 1) + ",";
+    jsonPayload += "\"pressure\":" + String(pressure, 1) + ",";
+    jsonPayload += "\"uv\":0,";
+    jsonPayload += "\"isRain\":false";
+    jsonPayload += "}";
+
+    Serial.print("🌐 Sending JSON: ");
+    Serial.println(jsonPayload);
+
+    // Send POST request
+    if (WiFi.status() == WL_CONNECTED) {
+      HTTPClient http;
+      http.begin("http://localhost:8080/weather-data"); // Your server URL
+      http.addHeader("Content-Type", "application/json");
+      int httpResponseCode = http.POST(jsonPayload);
+
+      if (httpResponseCode > 0) {
+        Serial.print("✅ POST Response: ");
+        Serial.println(httpResponseCode);
+      } else {
+        Serial.print("❌ POST Error: ");
+        Serial.println(http.errorToString(httpResponseCode));
+      }
+      http.end();
+    } else {
+      Serial.println("❌ WiFi not connected!");
+    }
+  }
+
+  delay(100); // small delay to avoid flooding
+}
